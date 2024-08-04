@@ -1,12 +1,20 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response, status
 
 import torch
 from transformers import AutoTokenizer, AutoModelForMaskedLM, AutoModelForSequenceClassification
 
 app = FastAPI()
 
-@app.get("/word/{sentence}")
-async def get_suggested_word(sentence: str):
+@app.get("/word/{sentence}", status_code=200)
+async def get_suggested_word(sentence: str, response: Response):
+
+    if not sentence:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"response": "The prompt needs to be a string"}
+    if "<blank>" not in sentence:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"response": "The prompt need to contain the keyword <blank>"}
+
     suggestion_model_name = "bert-base-uncased"
     suggestion_tokenizer = AutoTokenizer.from_pretrained(suggestion_model_name)
     suggestion_model = AutoModelForMaskedLM.from_pretrained(suggestion_model_name)
@@ -41,4 +49,5 @@ async def get_suggested_word(sentence: str):
 
     sentiment_scores = analyze_sentiment(suggestions)
 
+    response.status_code = status.HTTP_200_OK
     return {"message": f"{suggestions, sentiment_scores}"}
